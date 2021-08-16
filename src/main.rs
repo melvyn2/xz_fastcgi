@@ -24,15 +24,19 @@ fn print_help() {
 }
 
 fn serve_file(req: &mut Request) -> Result<(), Error> {
-    let file = std::fs::File::open(req.param("DOCUMENT_PATH").ok_or(Error::new(
+    let file_param = req.param("DOCUMENT_PATH").ok_or(Error::new(
         std::io::ErrorKind::Other,
         "Missing Path FastCGI Parameter",
-    ))?)?;
+    ))?;
+
+    // println!("Attempting to serve {}", file_param);
+
+    let file = std::fs::File::open(file_param)?; // NGINX should handle file errors for us
 
     let mut filebuf: Vec<u8> = vec![];
     xz2::read::XzDecoder::new(file).read_to_end(&mut filebuf)?;
 
-    dbg!(&filebuf.len());
+    // println!("Decompressed {} bytes", filebuf.len());
 
     req.stdout()
         .write("Content-Type: application/octet-stream\r\n\r\n".as_bytes())?;
@@ -90,7 +94,8 @@ fn main() {
                 Err(e) => {
                     if e.kind() != ErrorKind::BrokenPipe {
                         eprintln!("{}", e);
-                        req.stderr()
+                        req.stderr().write(e.to_string().as_bytes()).unwrap(); // Log to NGINX error.log
+                        req.stdout()
                             .write("Status: 500 Internal Server Error\r\n\r\n".as_bytes())
                             .unwrap();
                     }
