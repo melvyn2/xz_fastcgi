@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 fastcgi = "*"
 xz2 = "*"
-ctrlc = "*"
+ctrlc = { version = "*", features = ["termination"] }
 
 [profile.release]
 codegen-units = 1
