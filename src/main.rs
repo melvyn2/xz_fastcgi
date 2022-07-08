@@ -17,17 +17,16 @@ fn print_help() {
     println!(
         "\t{} <PATH>",
         env::args()
-            .nth(0)
-            .unwrap_or(env!("CARGO_PKG_NAME").to_string())
+            .next()
+            .unwrap_or_else(|| env!("CARGO_PKG_NAME").to_string())
     );
     println!("Where PATH is a path to the unix socket to serve");
 }
 
 fn serve_file(req: &mut Request) -> Result<(), Error> {
-    let file_param = req.param("DOCUMENT_PATH").ok_or(Error::new(
-        std::io::ErrorKind::Other,
-        "Missing Path FastCGI Parameter",
-    ))?;
+    let file_param = req
+        .param("DOCUMENT_PATH")
+        .ok_or_else(|| Error::new(std::io::ErrorKind::Other, "Missing Path FastCGI Parameter"))?;
 
     // println!("Attempting to serve {}", file_param);
 
@@ -39,20 +38,16 @@ fn serve_file(req: &mut Request) -> Result<(), Error> {
     // println!("Decompressed {} bytes", filebuf.len());
 
     req.stdout()
-        .write("Content-Type: application/octet-stream\r\n\r\n".as_bytes())?;
-    req.stdout().write(filebuf.as_slice())?;
-    req.stdout().write("\r\n\r\n".as_bytes())?;
+        .write_all("Content-Type: application/octet-stream\r\n\r\n".as_bytes())?;
+    req.stdout().write_all(filebuf.as_slice())?;
+    req.stdout().write_all("\r\n\r\n".as_bytes())?;
 
     Ok(())
 }
 
 fn main() {
     let mut args = env::args();
-    if args.len() < 2
-        || args
-            .find(|arg| (arg == "-h") || (arg == "--help"))
-            .is_some()
-    {
+    if args.len() < 2 || args.any(|arg| (arg == "-h") || (arg == "--help")) {
         print_help();
         exit(0)
     }
@@ -94,9 +89,9 @@ fn main() {
                 Err(e) => {
                     if e.kind() != ErrorKind::BrokenPipe {
                         eprintln!("{}", e);
-                        req.stderr().write(e.to_string().as_bytes()).unwrap(); // Log to NGINX error.log
+                        req.stderr().write_all(e.to_string().as_bytes()).unwrap(); // Log to NGINX error.log
                         req.stdout()
-                            .write("Status: 500 Internal Server Error\r\n\r\n".as_bytes())
+                            .write_all("Status: 500 Internal Server Error\r\n\r\n".as_bytes())
                             .unwrap();
                     }
                 }
