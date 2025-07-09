@@ -26,7 +26,7 @@ fn print_help() {
 fn serve_file(req: &mut Request) -> Result<(), Error> {
     let file_param = req
         .param("DOCUMENT_PATH")
-        .ok_or_else(|| Error::new(std::io::ErrorKind::Other, "Missing Path FastCGI Parameter"))?;
+        .ok_or_else(|| Error::other("Missing Path FastCGI Parameter"))?;
 
     // println!("Attempting to serve {}", file_param);
 
@@ -88,7 +88,7 @@ fn main() {
                 Ok(_) => (),
                 Err(e) => {
                     if e.kind() != ErrorKind::BrokenPipe {
-                        eprintln!("{}", e);
+                        eprintln!("{e}");
                         req.stderr().write_all(e.to_string().as_bytes()).unwrap(); // Log to NGINX error.log
                         req.stdout()
                             .write_all("Status: 500 Internal Server Error\r\n\r\n".as_bytes())
